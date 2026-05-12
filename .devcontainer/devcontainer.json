@@ -1,0 +1,19 @@
+{
+  "name": "Next.js & Supabase Dev",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "prisma.prisma",
+        "supabase.ext-supabase-lite"
+      ]
+    }
+  },
+  "forwardPorts": [3000, 54321, 54323],
+  "postCreateCommand": "npm install",
+  "remoteUser": "node"
+}
