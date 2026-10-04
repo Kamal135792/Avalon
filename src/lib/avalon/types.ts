@@ -1,9 +1,3 @@
-export type GameStatus = "lobby" | "in_progress" | "finished";
-export type MissionResult = "success" | "fail";
-export type ProposalStatus = "pending" | "approved" | "rejected";
-export type VoteCard = "approve" | "reject";
-export type MissionCard = "success" | "fail";
-
 export type RoleName =
   | "merlin"
   | "percival"
@@ -13,102 +7,83 @@ export type RoleName =
   | "mordred"
   | "oberon"
   | "minion";
-
 export type Alignment = "good" | "evil";
-
-export interface GameRow {
-  id: string;
-  room_code: string;
-  status: GameStatus;
-  current_mission: number;
-  vote_track: number;
-  winner: Alignment | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface PlayerRow {
-  id: string;
-  game_id: string;
-  session_id: string;
-  name: string;
-  role: RoleName | null;
-  is_host: boolean;
-  created_at: string;
-}
-
-export interface MissionRow {
-  id: string;
-  game_id: string;
-  mission_number: number;
-  team_player_ids: string[];
-  success_count: number;
-  fail_count: number;
-  result: MissionResult | null;
-  created_at: string;
-}
-
-export interface ProposalRow {
-  id: string;
-  game_id: string;
-  mission_number: number;
-  proposal_number: number;
-  proposer_id: string | null;
-  team_player_ids: string[];
-  status: ProposalStatus;
-  created_at: string;
-}
-
-export interface VoteRow {
-  id: string;
-  game_id: string;
-  proposal_id: string;
-  player_id: string;
-  vote: VoteCard;
-  created_at: string;
-}
-
-export interface MissionSubmissionRow {
-  id: string;
-  mission_id: string;
-  player_id: string;
-  card: MissionCard;
-  created_at: string;
-}
-
+export type MissionCard = "success" | "fail";
+export type MissionResult = MissionCard;
+export type VoteCard = "approve" | "reject";
 export interface RoleOptions {
   percival: boolean;
   morgana: boolean;
   mordred: boolean;
   oberon: boolean;
 }
-
-export interface RoleAssignment {
-  playerId: string;
-  role: RoleName;
-  alignment: Alignment;
+export interface Options extends RoleOptions {
+  lady: boolean;
+  targeting: boolean;
 }
-
-export interface RoleKnowledge {
-  playerId: string;
-  role: RoleName;
-  alignment: Alignment;
-  knownEvilIds: string[];
-  seenAsMerlinIds: string[];
-  notes: string[];
+export type Phase =
+  "lobby" | "team" | "vote" | "quest" | "lady" | "assassination" | "finished";
+export interface Game {
+  id: string;
+  code: string;
+  round_id: string;
+  phase: Phase;
+  quest: number;
+  rejections: number;
+  leader_id: string | null;
+  lady_id: string | null;
+  lady_used: string[];
+  options: Options;
+  winner: Alignment | null;
+  reason: string | null;
+  assassin_target: string | null;
 }
-
-export interface VoteResolution {
-  approveCount: number;
-  rejectCount: number;
-  approved: boolean;
-  nextVoteTrack: number;
-  voteTrackFailed: boolean;
+export interface Player {
+  id: string;
+  name: string;
+  host: boolean;
+  ready: boolean;
+  online: boolean;
+  seat: number;
+  role: RoleName | null;
 }
-
-export interface MissionResolution {
-  successCount: number;
-  failCount: number;
-  requiredFails: number;
-  result: MissionResult;
+export interface Proposal {
+  id: string;
+  number: number;
+  quest: number;
+  leader_id: string;
+  team: string[];
+  status: "pending" | "approved" | "rejected";
+  votes: { player_id: string; card: VoteCard | null }[];
+}
+export interface Quest {
+  id: string;
+  number: number;
+  team: string[];
+  result: MissionResult | null;
+  fails: number | null;
+  submitted: number;
+  my_card: MissionCard | null;
+}
+export interface Snapshot {
+  game: Game;
+  me: string;
+  players: Player[];
+  hand: {
+    role: RoleName | null;
+    alignment: Alignment | null;
+    knownEvilIds: string[];
+    seenAsMerlinIds: string[];
+    inspections: { target: string; alignment: Alignment }[];
+  };
+  proposals: Proposal[];
+  quests: Quest[];
+  can_claim_host: boolean;
+  messages: {
+    id: number;
+    player_id: string;
+    name: string;
+    body: string;
+    created_at: string;
+  }[];
 }

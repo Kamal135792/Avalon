@@ -1,116 +1,136 @@
 "use client";
-
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGameState } from "@/hooks/useGameState";
+import Rules from "./Rules";
 
 export default function LandingClient() {
   const router = useRouter();
-  const { createGame, joinGame, error, isLoading } = useGameState();
+  const { createGame, joinGame, recover, error, isLoading } = useGameState();
   const [name, setName] = useState("");
-  const [roomCode, setRoomCode] = useState("");
-
-  const normalizedRoomCode = useMemo(
-    () => roomCode.trim().toUpperCase(),
-    [roomCode]
-  );
-
-  const canSubmit = name.trim().length > 1;
-
+  const [code, setCode] = useState("");
+  const [key, setKey] = useState("");
+  const [last, setLast] = useState("");
+  const [notice, setNotice] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const invite = new URLSearchParams(location.search).get("room");
+      if (invite && /^[A-Z]{4}$/i.test(invite)) setCode(invite.toUpperCase());
+      try {
+        setLast(localStorage.getItem("avalon_last_room") ?? "");
+      } catch {
+        /* Storage errors are reported by the hook. */
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+  const valid = name.trim().length >= 2 && name.trim().length <= 24;
   return (
-    <div className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden px-6 py-16">
-      <div className="pointer-events-none absolute inset-0 opacity-40">
-        <div className="absolute left-12 top-20 h-28 w-28 rounded-full bg-amber-500/40 blur-3xl" />
-        <div className="absolute right-20 top-10 h-40 w-40 rounded-full bg-teal-400/30 blur-3xl" />
-        <div className="absolute bottom-12 left-1/3 h-36 w-36 rounded-full bg-amber-300/20 blur-3xl" />
-      </div>
-
-      <div className="relative w-full max-w-4xl rounded-3xl border border-white/10 bg-white/5 p-10 shadow-[0_30px_120px_rgba(0,0,0,0.45)] backdrop-blur">
-        <div className="grid gap-10 md:grid-cols-[1.2fr_0.8fr]">
-          <div className="space-y-6">
-            <p className="font-display text-sm uppercase tracking-[0.4em] text-amber-300/80">
-              Avalon Anonymous
-            </p>
-            <h1 className="font-display text-4xl leading-tight text-white md:text-5xl">
-              Deceive, deduce, and vanish. No accounts. Just the code.
-            </h1>
-            <p className="text-base text-slate-300/90 md:text-lg">
-              Create a private war table in seconds. Share a 4-letter sigil and
-              uncover who serves the Light and who plots in the shadows.
-            </p>
-
-            <div className="grid gap-3">
-              <label className="text-xs uppercase tracking-[0.3em] text-slate-300">
-                Display Name
-              </label>
-              <input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Sir Kay, Lady Nyx, ..."
-                className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-base text-white outline-none transition focus:border-amber-300/70 focus:ring-2 focus:ring-amber-400/30"
-              />
-            </div>
-
-            {error ? (
-              <div className="rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-                {error}
-              </div>
-            ) : null}
+    <main className="room min-h-screen content-center">
+      <section className="panel space-y-6">
+        <p className="eyebrow">Avalon Anonymous · 5–10 friends</p>
+        <h1 className="font-display text-5xl">
+          A secret role.
+          <br />A table full of suspects.
+        </h1>
+        <p className="max-w-2xl text-slate-300">
+          Create a room, share its code, and find whom to trust. Play together
+          in person, in a voice call, or using table chat.
+        </p>
+        <label className="block max-w-md">
+          Your display name
+          <input
+            className="mt-2"
+            aria-label="Display name"
+            maxLength={24}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Sir Kay"
+            autoComplete="nickname"
+          />
+        </label>
+        <fieldset disabled={isLoading} className="grid gap-5 sm:grid-cols-2">
+          <div className="space-y-3">
+            <h2>Host a table</h2>
+            <p>Choose roles and start when everyone is ready.</p>
+            <button
+              className="primary"
+              disabled={!valid}
+              onClick={async () => {
+                const c = await createGame({ name });
+                if (c) router.push(`/${c}/lobby`);
+              }}
+            >
+              Create room
+            </button>
           </div>
-
-          <div className="space-y-6">
-            <div className="rounded-2xl border border-white/10 bg-black/40 p-6">
-              <h2 className="text-lg font-semibold text-white">Create a new room</h2>
-              <p className="mt-2 text-sm text-slate-300">
-                You become the host. Configure roles in the lobby.
-              </p>
-              <button
-                type="button"
-                disabled={!canSubmit || isLoading}
-                onClick={async () => {
-                  const code = await createGame({ name: name.trim() });
-                  if (code) {
-                    router.push(`/${code}/lobby`);
-                  }
-                }}
-                className="mt-4 w-full rounded-2xl bg-amber-400 px-4 py-3 text-sm font-semibold text-black transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:bg-amber-400/50"
-              >
-                {isLoading ? "Forging room..." : "Create Game"}
-              </button>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-black/40 p-6">
-              <h2 className="text-lg font-semibold text-white">Join with a sigil</h2>
-              <p className="mt-2 text-sm text-slate-300">
-                Enter the room code from your host.
-              </p>
-              <input
-                value={roomCode}
-                onChange={(event) => setRoomCode(event.target.value)}
-                maxLength={4}
-                placeholder="ABCD"
-                className="mt-4 w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-center text-lg uppercase tracking-[0.4em] text-white outline-none transition focus:border-teal-300/70 focus:ring-2 focus:ring-teal-400/30"
-              />
-              <button
-                type="button"
-                disabled={!canSubmit || normalizedRoomCode.length !== 4 || isLoading}
-                onClick={async () => {
-                  const code = await joinGame({
-                    roomCode: normalizedRoomCode,
-                    name: name.trim(),
-                  });
-                  if (code) {
-                    router.push(`/${code}/lobby`);
-                  }
-                }}
-                className="mt-4 w-full rounded-2xl border border-teal-300/50 bg-teal-400/20 px-4 py-3 text-sm font-semibold text-teal-100 transition hover:bg-teal-400/30 disabled:cursor-not-allowed disabled:border-teal-400/20"
-              >
-                {isLoading ? "Tracing sigil..." : "Join Game"}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+          <form
+            className="space-y-3"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const c = await joinGame({ roomCode: code, name });
+              if (c) router.push(`/${c}/lobby`);
+            }}
+          >
+            <h2>Join your friends</h2>
+            <input
+              aria-label="Room code"
+              placeholder="ABCD"
+              maxLength={4}
+              value={code}
+              onChange={(e) =>
+                setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))
+              }
+            />
+            <button type="submit" disabled={!valid || code.length !== 4}>
+              Join room
+            </button>
+          </form>
+        </fieldset>
+        {error && (
+          <p role="alert" className="error">
+            {error}
+          </p>
+        )}
+        {notice && <p role="status">{notice}</p>}
+        {last && (
+          <button onClick={() => router.push(`/${last}/lobby`)}>
+            Return to room {last}
+          </button>
+        )}
+        <p className="text-sm text-slate-400">
+          Your identity stays in this browser. Tabs share one player. Use
+          another browser profile or a private window for a second player.
+        </p>
+        <details>
+          <summary>Recover an existing player</summary>
+          <p className="my-3">
+            Paste the private recovery key you saved in your room. This replaces
+            this browser’s player identity; then use the room code to return.
+          </p>
+          <input
+            type="password"
+            autoComplete="off"
+            aria-label="Recovery key"
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+          />
+          <button
+            className="mt-3"
+            onClick={() => {
+              if (recover(key)) {
+                setKey("");
+                setNotice(
+                  "Player restored. Enter your room code and join, or return to your last room.",
+                );
+              }
+            }}
+          >
+            Restore player
+          </button>
+        </details>
+      </section>
+      <Rules />
+    </main>
   );
 }
